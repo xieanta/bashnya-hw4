@@ -25,6 +25,35 @@ type LineInfo struct {
 	Original string
 }
 
+func printResults(f Flags, d []string, meeting []int, output io.Writer) {
+	switch {
+	case f.C:
+		for i, value := range meeting {
+			if value >= 1 {
+				fmt.Fprintln(output, value, d[i])
+			}
+		}
+	case f.D:
+		for i, value := range meeting {
+			if value > 1 {
+				fmt.Fprintln(output, d[i])
+			}
+		}
+	case f.U:
+		for i, value := range meeting {
+			if value == 1 {
+				fmt.Fprintln(output, d[i])
+			}
+		}
+	default:
+		for i, value := range meeting {
+			if value >= 1 {
+				fmt.Fprintln(output, d[i])
+			}
+		}
+	}
+}
+
 func processCommand(f Flags, d []string, output io.Writer) {
 	counts := make(map[string]*LineInfo)
 	dCopy := append([]string{}, d...)
@@ -70,35 +99,8 @@ func processCommand(f Flags, d []string, output io.Writer) {
 		}
 		meeting[counts[el].Index] = counts[el].Count
 	}
-	switch {
-	case f.C:
-		for i, value := range meeting {
-			if value >= 1 {
-				fmt.Fprintln(output, value, d[i])
-			}
 
-		}
-	case f.D:
-		for i, value := range meeting {
-			if value > 1 {
-				fmt.Fprintln(output, d[i])
-			}
-		}
-	case f.U:
-		for i, value := range meeting {
-			if value == 1 {
-				fmt.Fprintln(output, d[i])
-			}
-		}
-	default:
-		for i, value := range meeting {
-			if value >= 1 {
-				fmt.Fprintln(output, d[i])
-			}
-		}
-
-	}
-
+	printResults(f, d, meeting, output)
 }
 
 func processData(r io.Reader) []string {
