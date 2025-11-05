@@ -54,40 +54,52 @@ func printResults(f Flags, d []string, meeting []int, output io.Writer) {
 	}
 }
 
+func processIFlag(copy *[]string) {
+	for i, el := range *copy {
+		(*copy)[i] = strings.ToLower(el)
+	}
+}
+
+func processFFlag(f Flags, copy *[]string) {
+	for i, el := range *copy {
+		var newString string
+		stringSplit := strings.Split(el, " ")
+		if f.F < len(stringSplit) {
+			newString = strings.Join(stringSplit[f.F:], " ")
+		} else {
+			newString = ""
+		}
+
+		if newString == "" {
+			newString = "" + el
+		}
+		(*copy)[i] = newString
+	}
+}
+
+func processSFlag(f Flags, copy *[]string) {
+	for i, el := range *copy {
+		if len(el) > f.S {
+
+			(*copy)[i] = el[f.S:]
+		} else {
+			(*copy)[i] = ""
+		}
+	}
+}
+
 func processCommand(f Flags, d []string, output io.Writer) {
 	counts := make(map[string]*LineInfo)
 	dCopy := append([]string{}, d...)
 
 	if f.I {
-		for i, el := range dCopy {
-			dCopy[i] = strings.ToLower(el)
-		}
+		processIFlag(&dCopy)
 	}
 	if f.F > 0 {
-		for i, el := range dCopy {
-			var newString string
-			stringSplit := strings.Split(el, " ")
-			if f.F < len(stringSplit) {
-				newString = strings.Join(stringSplit[f.F:], " ")
-			} else {
-				newString = ""
-			}
-
-			if newString == "" {
-				newString = "" + el
-			}
-			dCopy[i] = newString
-		}
+		processFFlag(f, &dCopy)
 	}
 	if f.S > 0 {
-		for i, el := range dCopy {
-			if len(el) > f.S {
-
-				dCopy[i] = el[f.S:]
-			} else {
-				dCopy[i] = ""
-			}
-		}
+		processSFlag(f, &dCopy)
 
 	}
 	meeting := make([]int, len(d))
