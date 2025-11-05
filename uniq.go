@@ -1,0 +1,171 @@
+package main
+
+import (
+	"bufio"
+	"flag"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"strings"
+)
+
+type Flags struct {
+	C bool
+	D bool
+	U bool
+	F int
+	S int
+	I bool
+}
+
+type LineInfo struct {
+	Count    int
+	Index    int
+	Original string
+}
+
+func printResults(f Flags, d []string, meeting []int, output io.Writer) {
+	switch {
+	case f.C:
+		for i, value := range meeting {
+			if value >= 1 {
+				fmt.Fprintln(output, value, d[i])
+			}
+		}
+	case f.D:
+		for i, value := range meeting {
+			if value > 1 {
+				fmt.Fprintln(output, d[i])
+			}
+		}
+	case f.U:
+		for i, value := range meeting {
+			if value == 1 {
+				fmt.Fprintln(output, d[i])
+			}
+		}
+	default:
+		for i, value := range meeting {
+			if value >= 1 {
+				fmt.Fprintln(output, d[i])
+			}
+		}
+	}
+}
+
+func processIFlag(copy *[]string) {
+	for i, el := range *copy {
+		(*copy)[i] = strings.ToLower(el)
+	}
+}
+
+func processFFlag(f Flags, copy *[]string) {
+	for i, el := range *copy {
+		var newString string
+		stringSplit := strings.Split(el, " ")
+		if f.F < len(stringSplit) {
+			newString = strings.Join(stringSplit[f.F:], " ")
+		} else {
+			newString = ""
+		}
+
+		if newString == "" {
+			newString = "" + el
+		}
+		(*copy)[i] = newString
+	}
+}
+
+func processSFlag(f Flags, copy *[]string) {
+	for i, el := range *copy {
+		if len(el) > f.S {
+
+			(*copy)[i] = el[f.S:]
+		} else {
+			(*copy)[i] = ""
+		}
+	}
+}
+
+func processCommand(f Flags, d []string, output io.Writer) {
+	counts := make(map[string]*LineInfo)
+	dCopy := append([]string{}, d...)
+
+	if f.I {
+		processIFlag(&dCopy)
+	}
+	if f.F > 0 {
+		processFFlag(f, &dCopy)
+	}
+	if f.S > 0 {
+		processSFlag(f, &dCopy)
+
+	}
+	meeting := make([]int, len(d))
+	for i, el := range dCopy {
+		if value, exists := counts[el]; exists {
+			value.Count++
+		} else {
+			counts[el] = &LineInfo{Count: 1, Index: i, Original: d[i]}
+		}
+		meeting[counts[el].Index] = counts[el].Count
+	}
+
+	printResults(f, d, meeting, output)
+}
+
+func processData(r io.Reader) []string {
+	var lines []string
+	scanner := bufio.NewScanner(r)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines = append(lines, line)
+
+	}
+	return lines
+}
+
+func main() {
+	var commandFlags Flags
+	flag.BoolVar(&commandFlags.C, "c", false, "print count string encounters with strings")
+	flag.BoolVar(&commandFlags.D, "d", false, "print dublicated strings")
+	flag.BoolVar(&commandFlags.U, "u", false, "print unique strings")
+	flag.IntVar(&commandFlags.F, "f", 0, "skip n fields")
+	flag.IntVar(&commandFlags.S, "s", 0, "skip n chars")
+	flag.BoolVar(&commandFlags.I, "i", false, "ignore case")
+
+	flag.Parse()
+	activated := 0
+	if commandFlags.C {
+		activated++
+	}
+	if commandFlags.D {
+		activated++
+	}
+	if commandFlags.U {
+		activated++
+	}
+
+	if activated > 1 {
+		fmt.Fprintln(os.Stderr, "Error: use only one of -c, -d, -u flags")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	var reader io.Reader
+	if len(flag.Args()) > 0 {
+		inputFile, err := os.Open(flag.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer inputFile.Close()
+		reader = inputFile
+	} else {
+		input := os.Stdin
+		reader = input
+	}
+	data := processData(reader)
+	processCommand(commandFlags, data, os.Stdout)
+}
